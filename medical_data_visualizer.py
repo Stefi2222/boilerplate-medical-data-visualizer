@@ -3,58 +3,98 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 1
-df = None
+# Cargar los datos de los pacientes
+df = pd.read_csv('medical_examination.csv')
 
-# 2
-df['overweight'] = None
+# Calcular el IMC y determinar si existe sobrepeso
+df['overweight'] = (
+    df['weight'] / (df['height'] / 100) ** 2 > 25
+).astype(int)
 
-# 3
+# Normalizar colesterol y glucosa
+df['cholesterol'] = (df['cholesterol'] > 1).astype(int)
+df['gluc'] = (df['gluc'] > 1).astype(int)
 
 
-# 4
+# Crear gráfico de categorías
 def draw_cat_plot():
-    # 5
-    df_cat = None
 
+    # Organizar los datos
+    df_cat = pd.melt(
+        df,
+        id_vars=['cardio'],
+        value_vars=[
+            'cholesterol',
+            'gluc',
+            'smoke',
+            'alco',
+            'active',
+            'overweight'
+        ]
+    )
 
-    # 6
-    df_cat = None
-    
+    # Agrupar y contar los registros
+    df_cat = (
+        df_cat.groupby(['cardio', 'variable', 'value'])
+        .size()
+        .reset_index(name='total')
+    )
 
-    # 7
+    # Crear el gráfico
+    chart = sns.catplot(
+        data=df_cat,
+        x='variable',
+        y='total',
+        hue='value',
+        col='cardio',
+        kind='bar'
+    )
 
+    fig = chart.fig
 
-
-    # 8
-    fig = None
-
-
-    # 9
+    # Guardar imagen
     fig.savefig('catplot.png')
+
     return fig
 
 
-# 10
+# Crear mapa de calor de correlaciones
 def draw_heat_map():
-    # 11
-    df_heat = None
 
-    # 12
-    corr = None
+    # Limpiar registros inconsistentes
+    df_heat = df.loc[
+        (df['ap_lo'] <= df['ap_hi'])
+        &
+        (df['height'] >= df['height'].quantile(0.025))
+        &
+        (df['height'] <= df['height'].quantile(0.975))
+        &
+        (df['weight'] >= df['weight'].quantile(0.025))
+        &
+        (df['weight'] <= df['weight'].quantile(0.975))
+    ].copy()
 
-    # 13
-    mask = None
+    # Calcular correlaciones
+    corr = df_heat.corr()
 
+    # Ocultar la mitad superior
+    mask = np.triu(
+        np.ones_like(corr, dtype=bool)
+    )
 
+    # Crear el mapa de calor
+    fig, ax = plt.subplots(figsize=(12, 10))
 
-    # 14
-    fig, ax = None
+    sns.heatmap(
+        corr,
+        mask=mask,
+        annot=True,
+        fmt='.1f',
+        square=True,
+        ax=ax
+    )
 
-    # 15
-
-
-
-    # 16
+    # Guardar imagen
     fig.savefig('heatmap.png')
+
     return fig
